@@ -1,30 +1,38 @@
 import time,json,pymongo
 from google.cloud import pubsub_v1
-
-# TODO(developer)
-project_id = "vigilant-yeti-343907"
-topic_id = "mongo-bq-test"
+from datetime import datetime
 
 publisher = pubsub_v1.PublisherClient.from_service_account_json("./../vigilant-yeti-343907-13ab28347e73.json")
 topic_name = 'projects/{project_id}/topics/{topic}'.format(
     project_id="vigilant-yeti-343907",
-    topic='mongo-bq-test',
+    topic='mongo-bq-test-2',
 )
 
-client = pymongo.MongoClient("mongodb+srv://admin:admin@cluster0.lsbxu.mongodb.net/sample_mflix")
-db = client['sample_mflix']['comments']
-collection = db['comments']
+client = pymongo.MongoClient("mongodb+srv://admin:admin@cluster0.lsbxu.mongodb.net/sample")
+db = client['sample']['comments']
 
 try:
-    with db.watch([{'$match': {'operationType': 'insert'}}]) as stream:
+    with db.watch() as stream:
         for insert_change in stream:
-            new_doc = insert_change['fullDocument']
-            new_doc.pop('_id',None)
-            print(new_doc)
-            future = publisher.publish(topic_name, json.dumps(new_doc, indent=2).encode('utf-8'))
+            temp = {}
+            if(insert_change['operationType'] == 'insert'):
+                temp.update(insert_change['fullDocument'])
+                temp.pop('_id',None)
+                temp['id'] = str(insert_change['documentKey']['_id'])
+                temp['timestamp'] = str(datetime.now())
+                temp['operation'] = insert_change['operationType']
+            elif insert_change['operationType'] == 'update':
+                temp = insert_change['updateDescription']['updatedFields']
+                temp['id'] = str(insert_change['documentKey']['_id'])
+                temp['timestamp'] = str(datetime.now())
+                temp['operation'] = insert_change['operationType']
+
+            print(temp)
+            future = publisher.publish(topic_name, json.dumps(temp, indent=2).encode('utf-8'))
             future.result()
 
-except pymongo.errors.PyMongoError:
+except pymongo.errors.PyMongoError as e:
     # The ChangeStream encountered an unrecoverable error or the
     # resume attempt failed to recreate the cursor.
+    print(e)
     print("something went wrong!")
