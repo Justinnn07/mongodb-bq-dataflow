@@ -18,6 +18,7 @@
 
 ## Running
 
+ADD `MONGO_URL` in .env
 npm run dev
 
 ## working

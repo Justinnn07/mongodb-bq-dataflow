@@ -1,15 +1,16 @@
+require("dotenv").config();
 const mongoose = require("mongoose");
 const { PubSub } = require("@google-cloud/pubsub");
 
 // pubsub client
 const pubsubClient = new PubSub({
-  projectId: "vigilant-yeti-343907",
-  keyFilename: "./vigilant-yeti-343907-13ab28347e73.json",
+  projectId: "<YOUR_PROJECT_ID>",
+  keyFilename: "<YOUR_KEYFILE_NAME>",
 });
 
 // connect to mongoose
 mongoose
-  .connect("mongodb+srv://admin:admin@cluster0.lsbxu.mongodb.net/sample_mflix")
+  .connect(process.env.MONGO_URL)
   .then(() => console.log("successfully connected"));
 
 const topicName = "mongo-bq-test";
